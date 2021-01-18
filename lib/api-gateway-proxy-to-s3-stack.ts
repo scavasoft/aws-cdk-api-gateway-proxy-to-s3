@@ -15,7 +15,7 @@ export class ApiGatewayProxyToS3Stack extends cdk.Stack {
 
         this.bucket = new Bucket(this, 'Bucket', {
             websiteIndexDocument: "index.html",
-            websiteErrorDocument: 'index.html',
+            websiteErrorDocument: "404.html",
             publicReadAccess: true,
 
             removalPolicy: RemovalPolicy.DESTROY,
@@ -28,12 +28,20 @@ export class ApiGatewayProxyToS3Stack extends cdk.Stack {
             destinationBucket: this.bucket,
         })
 
-        this.api = new RestApi(this, id + '-RestApi');
+        this.api = new RestApi(this, id + '-RestApi', {});
 
         this.api.root
             .addResource('public')
             .addProxy({
-                defaultIntegration: new HttpIntegration(this.bucket.bucketWebsiteUrl),
+                defaultMethodOptions: {
+                    requestParameters: {"method.request.path.proxy": true}
+                },
+                defaultIntegration: new HttpIntegration(this.bucket.bucketWebsiteUrl + "/{proxy}", {
+                    httpMethod: 'ANY',
+                    options: {
+                        requestParameters: {'integration.request.path.proxy': 'method.request.path.proxy'}
+                    }
+                }),
             });
     }
 }
